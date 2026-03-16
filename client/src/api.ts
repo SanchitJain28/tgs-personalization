@@ -17,13 +17,15 @@ export async function getProducts() {
   return res.json();
 }
 
-export async function getProductConfig(id) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getProductConfig(id : any) {
   const res = await fetch(`${BASE}/api/product/${id}/config`, { headers });
   if (!res.ok) throw new Error((await res.json()).error);
   return res.json();
 }
 
-export async function saveProductConfig(id, payload) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function saveProductConfig(id : any, payload : any) {
   const res = await fetch(`${BASE}/api/product/${id}/config`, {
     method: "POST",
     headers,
