@@ -1,0 +1,32 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #F5EFE6;
+  --bg2:       #EDE0D0;
+  --surface:   #FDFAF6;
+  --text:      #1A1209;
+  --text2:     #6B5744;
+  --gold:      #C49A3C;
+  --dark:      #2C1A0E;
+  --border:    #D9CABB;
+  --radius:    6px;
+  --shadow:    0 2px 12px rgba(90,55,20,0.10);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input, select {
+  font-family: inherit;
+  font-size: 14px;
+}

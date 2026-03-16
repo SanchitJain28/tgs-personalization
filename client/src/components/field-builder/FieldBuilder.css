@@ -1,0 +1,111 @@
+.fb { display: flex; flex-direction: column; gap: 10px; }
+
+.fb-empty {
+  font-size: 13px;
+  color: var(--text2);
+  padding: 12px 0;
+}
+
+.fb-field {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fb-field-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fb-field-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  background: var(--bg2);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.fb-field-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.fb-field-actions button {
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.fb-field-actions button:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.fb-field-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+.fb-remove:hover:not(:disabled) { border-color: #c0392b !important; color: #c0392b !important; }
+
+.fb-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.fb-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fb-group--grow { flex: 1; }
+
+.fb-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fb-group input,
+.fb-group select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 4px;
+  transition: border-color 0.15s;
+}
+
+.fb-group input:focus,
+.fb-group select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.fb-group input[type="number"] { width: 80px; }
+
+.fb-add {
+  align-self: flex-start;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1.5px dashed var(--border);
+  color: var(--text2);
+  font-size: 13px;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+}
+
+.fb-add:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
