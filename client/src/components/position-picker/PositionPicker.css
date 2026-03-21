@@ -1,78 +1,110 @@
-.tgs-position-picker {
-  background: var(--color-surface, #FDFAF6);
-  padding: 24px;
-  border: 1px solid var(--color-border, #D9CABB);
-  border-radius: 8px;
-  margin-bottom: 24px;
-}
-
-.tgs-help-text {
-  font-size: 14px;
-  color: var(--color-text-secondary, #6B5744);
-  margin-top: 0;
-  margin-bottom: 20px;
-}
-
-.tgs-zone-wrapper {
+.pp {
   display: flex;
-  align-items: center;
-  gap: 32px;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.tgs-zone-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 70px);
-  gap: 8px;
-  width: 250px;
-  background: var(--color-bg-secondary, #EDE0D0);
-  padding: 12px;
-  border-radius: 8px;
-  border: 2px solid var(--color-border, #D9CABB);
+.pp-hint {
+  font-size: 12px;
+  color: var(--text2);
 }
 
-.tgs-zone-btn {
-  background: rgba(253, 250, 246, 0.4);
-  border: 1px dashed var(--color-border, #D9CABB);
+.pp-image-wrap {
+  position: relative;
+  cursor: crosshair;
+  border: 1px solid var(--border);
   border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select : none;
 }
 
-.tgs-zone-btn:hover {
-  background: var(--color-surface, #FDFAF6);
+.pp-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
 }
 
-.tgs-zone-btn.active {
-  background: var(--color-surface, #FDFAF6);
-  border: 2px solid var(--color-accent-gold, #C49A3C);
+/* Marker dot + ring */
+.pp-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
 }
 
-.tgs-zone-dot {
-  width: 14px;
-  height: 14px;
+.pp-marker-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--gold);
   border-radius: 50%;
-  background: var(--color-border, #D9CABB);
-  transition: all 0.2s ease;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px #fff;
 }
 
-.tgs-zone-btn.active .tgs-zone-dot {
-  background: var(--color-accent-gold, #C49A3C);
-  box-shadow: 0 0 0 4px rgba(196, 154, 60, 0.2);
+.pp-marker-ring {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+  animation: pp-pulse 1.5s ease-out infinite;
 }
 
-.tgs-active-label {
-  font-size: 15px;
-  color: var(--color-text-primary, #1A1209);
-  background: var(--color-bg-primary, #F5EFE6);
-  padding: 12px 16px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border, #D9CABB);
+@keyframes pp-pulse {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
 }
 
-.tgs-active-label strong {
-  color: var(--color-accent-gold, #C49A3C);
+/* Preview text label */
+.pp-preview-text {
+  position: absolute;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  z-index: 3;
+}
+
+/* Coords display */
+.pp-coords {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.pp-coords strong {
+  color: var(--gold);
+}
+
+/* No image fallback */
+.pp-no-image {
+  padding: 24px;
+  background: var(--bg2);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text2);
+}
+
+.pp-no-image code {
+  font-size: 11px;
+  background: var(--border);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--text);
 }

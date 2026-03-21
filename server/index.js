@@ -48,7 +48,6 @@ function requireAuth(req, res, next) {
 }
 
 /* ── Helper: Shopify GraphQL request ─────────────── */
-/* ── Helper: Shopify GraphQL request ─────────────── */
 async function shopifyGraphQL(query, variables = {}) {
   const session = new Session({
     id: `${SHOP}_session`,

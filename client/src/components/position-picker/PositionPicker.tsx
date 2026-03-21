@@ -1,58 +1,99 @@
+import { useRef, useCallback } from "react";
 import "./PositionPicker.css";
 import { type PersonalizationConfig } from "../config-editor/ConfigEditor";
 
 interface PositionPickerProps {
   config: PersonalizationConfig;
-  onChange: (config: PersonalizationConfig) => void;
+  previewImage: string | null;
+  onChange: (patch: Partial<PersonalizationConfig>) => void;
 }
 
 export default function PositionPicker({
   config,
+  previewImage,
   onChange,
 }: PositionPickerProps) {
-  const gridZones = [
-    { id: "north_west", label: "Top Left" },
-    { id: "north", label: "Top Center" },
-    { id: "north_east", label: "Top Right" },
-    { id: "west", label: "Middle Left" },
-    { id: "center", label: "Center" },
-    { id: "east", label: "Middle Right" },
-    { id: "south_west", label: "Bottom Left" },
-    { id: "south", label: "Bottom Center" },
-    { id: "south_east", label: "Bottom Right" },
-  ];
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  const currentGravity = config.gravity || "south";
+  const xPercent = config.xPercent ?? 50;
+  const yPercent = config.yPercent ?? 80;
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      onChange({
+        xPercent: Math.round(x),
+        yPercent: Math.round(y),
+        gravity: "north_west",
+      });
+    },
+    [onChange],
+  );
 
   return (
-    <div className="tgs-position-picker">
-      <h3 className="tgs-section-title">Text Position</h3>
-      <p className="tgs-help-text">
-        Click the zone where the text should render on the product image.
-      </p>
+    <div className="pp">
+      {previewImage ? (
+        <>
+          <p className="pp-hint">
+            Click anywhere on the image to place the text.
+          </p>
+          <div className="pp-image-wrap" onClick={handleClick}>
+            <img
+              ref={imgRef}
+              src={previewImage}
+              alt="Product preview"
+              className="pp-image"
+              draggable={false}
+            />
 
-      <div className="tgs-zone-wrapper">
-        <div className="tgs-zone-grid">
-          {gridZones.map((zone) => (
-            <button
-              key={zone.id}
-              type="button"
-              className={`tgs-zone-btn ${currentGravity === zone.id ? "active" : ""}`}
-              onClick={() => onChange({ ...config, gravity: zone.id })}
-              title={zone.label}
+            {/* Marker */}
+            <div
+              className="pp-marker"
+              style={{
+                left: `${xPercent}%`,
+                top: `${yPercent}%`,
+              }}
             >
-              <span className="tgs-zone-dot"></span>
-            </button>
-          ))}
+              <div className="pp-marker-dot" />
+              <div className="pp-marker-ring" />
+            </div>
+
+            {/* Preview text label at marker position */}
+            <div
+              className="pp-preview-text"
+              style={{
+                left: `${xPercent}%`,
+                top: `${yPercent}%`,
+                color: `#${config.textColor}`,
+                fontSize: `${Math.max(10, config.fontSize * 0.18)}px`,
+                fontFamily: config.fontFamily,
+              }}
+            >
+              Preview Text
+            </div>
+          </div>
+
+          <div className="pp-coords">
+            <span>
+              X: <strong>{xPercent}%</strong>
+            </span>
+            <span>
+              Y: <strong>{yPercent}%</strong>
+            </span>
+          </div>
+        </>
+      ) : (
+        <div className="pp-no-image">
+          <p>No preview image set for this product.</p>
+          <p>
+            Add a <code>custom.preview_image</code> metafield to enable click
+            positioning.
+          </p>
         </div>
-        <div className="tgs-active-label">
-          Currently mapped to:{" "}
-          <strong>
-            {gridZones.find((z) => z.id === currentGravity)?.label ||
-              "Bottom Center"}
-          </strong>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
