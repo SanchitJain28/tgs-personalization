@@ -198,7 +198,6 @@ export default function ConfigEditor({
   productId,
   onSaved,
 }: ConfigEditorProps) {
-  console.log("Rendering")
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [config, setConfig] = useState<PersonalizationConfig>(DEFAULT_CONFIG);
   const [isPersonalizable, setIsPersonalizable] = useState(false);

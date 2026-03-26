@@ -434,14 +434,17 @@ function TextFieldStyleEditor({
       paramsToSign: Record<string, unknown>
     ) => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/cloudinary/sign`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-config-secret": import.meta.env.VITE_CONFIG_SECRET || "", 
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:3001"}/api/cloudinary/sign`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-config-secret": import.meta.env.VITE_CONFIG_SECRET || "",
+            },
+            body: JSON.stringify({ paramsToSign }),
           },
-          body: JSON.stringify({ paramsToSign }),
-        });
+        );
         const data = await response.json();
         
         if (data.signature) {
