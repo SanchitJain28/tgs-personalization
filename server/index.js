@@ -1,11 +1,11 @@
 import "dotenv/config";
 import express from "express";
 import "@shopify/shopify-api/adapters/node"; 
-
+import { v2 as cloudinary } from "cloudinary";
 import cors from "cors";
 import { shopifyApi, ApiVersion, Session } from "@shopify/shopify-api";
 import { restResources } from "@shopify/shopify-api/rest/admin/2025-01"; 
-// 1. Initialize Shopify with updated ApiVersion and hostScheme
+// ? Initialize Shopify with updated ApiVersion and hostScheme
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
@@ -281,6 +281,26 @@ app.post("/api/product/:id/config", requireAuth, async (req, res) => {
   }
 });
 
+
+app.post("/api/cloudinary/sign", requireAuth, (req, res) => {
+  try {
+    const { paramsToSign } = req.body;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!apiSecret) {
+      return res.status(500).json({ error: "Missing CLOUDINARY_API_SECRET" });
+    }
+
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      apiSecret,
+    );
+    res.json({ signature });
+  } catch (err) {
+    console.error("[TGS] Cloudinary sign error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 /* ── Health check ─────────────────────────────────── */
 app.get("/health", (req, res) => {
   res.json({ ok: true, authenticated: !!accessToken });

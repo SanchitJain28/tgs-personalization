@@ -352,3 +352,30 @@
 }
 
 .fb-add:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Position Nudge Controls */
+.fb-pos-nudges {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.fb-pos-nudges button {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text2);
+  transition: all 0.15s;
+}
+
+.fb-pos-nudges button:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}

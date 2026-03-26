@@ -1,0 +1,50 @@
+/* client/src/components/interactive-area-selector/InteractiveAreaSelector.css */
+
+.ias-container {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden; /* Important for Draggable bounds */
+  user-select: none;
+  -webkit-user-select : none
+}
+
+.ias-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
+}
+
+.ias-box {
+  box-sizing: border-box;
+  border: 2px dashed var(--gold);
+  background: rgba(196, 154, 60, 0.15);
+  cursor: move;
+  position: relative;
+}
+
+.ias-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--gold);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.react-resizable-handle {
+  background: var(--gold);
+  border: 1px solid #fff;
+  border-radius: 50%;
+  width: 12px !important;
+  height: 12px !important;
+  bottom: -6px !important;
+  right: -6px !important;
+}

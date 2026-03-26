@@ -18,15 +18,10 @@ interface ConfigEditorProps {
 }
 
 /* ── Build full Cloudinary composite URL ─────────── */
-/* ── Build full Cloudinary composite URL ─────────── */
 function buildCompositeUrl(
   config: PersonalizationConfig,
   previewImageUrl: string,
 ): string {
-  console.log("[TGS Debug] --- Building Composite URL ---");
-  console.log("[TGS Debug] Config:", config);
-  console.log("[TGS Debug] Base Image:", previewImageUrl);
-
   if (!CLOUD_NAME || !previewImageUrl || !config.fields.length) {
     console.warn(
       "[TGS Debug] Missing Cloud Name, Preview Image, or Fields. Aborting.",
@@ -44,18 +39,28 @@ function buildCompositeUrl(
         if (field.type === "text") {
           const f = field as TextField;
 
-          // 1. Safe defaults
-          const font = (f.fontFamily || "Arial").replace(/ /g, "%20");
-          const color = (f.textColor || "C49A3C").replace("#", ""); // Ensure no '#' is present
+          let font = (f.fontFamily || "Arial").replace(/ /g, "%20");
+          const isCustomFont = /\.(ttf|otf|woff2)$/i.test(font);
+
+          if (isCustomFont) {
+            font = font.replace(/\//g, ":");
+          }
+
+          const color = (f.textColor || "C49A3C").replace("#", "");
           const textContent = (f.label || "SAMPLE").trim() || "SAMPLE";
 
-          // 2. Formatting flags
-          const weight = f.fontWeight !== "normal" ? `_${f.fontWeight}` : "";
-          const italic = f.fontStyle === "italic" ? "_italic" : "";
+          const weight =
+            !isCustomFont && f.fontWeight !== "normal"
+              ? `_${f.fontWeight}`
+              : "";
+          const italic =
+            !isCustomFont && f.fontStyle === "italic" ? "_italic" : "";
           const decoration =
             f.textDecoration !== "none" ? `_${f.textDecoration}` : "";
-          const align =
-            f.textAlign !== "left" ? `_text_align_${f.textAlign}` : "";
+
+          // 1. Applies internal alignment (_center, _right)
+          const align = f.textAlign !== "left" ? `_${f.textAlign}` : "";
+
           const lspacing = f.letterSpacing
             ? `_letter_spacing_${f.letterSpacing}`
             : "";
@@ -68,13 +73,41 @@ function buildCompositeUrl(
             textContent.toUpperCase().replace(/,/g, "%2C"),
           );
 
+          // 2 & 3. Combine Gravity with your c_fit + w_ logic
+          let gravity = "g_north_west";
+          let xStr = (f.xPercent / 100).toFixed(4);
+          const yStr = (f.yPercent / 100).toFixed(4);
+          let safeWidth = 1.0; // Default to 100% width
+
+          if (f.textAlign === "center") {
+            gravity = "g_north"; // Anchor top-center of the text box
+            xStr = (f.xPercent / 100 - 0.5).toFixed(4);
+
+            // Auto-calculate bounding box: Distance to nearest edge * 2
+            safeWidth = (Math.min(f.xPercent, 100 - f.xPercent) * 2) / 100;
+          } else if (f.textAlign === "right") {
+            gravity = "g_north_east"; // Anchor top-right of the text box
+            xStr = (1 - f.xPercent / 100).toFixed(4);
+
+            // Max width is distance from left edge to anchor
+            safeWidth = f.xPercent / 100;
+          } else {
+            // Left
+            gravity = "g_north_west"; // Anchor top-left of the text box
+
+            // Max width is distance from anchor to right edge
+            safeWidth = (100 - f.xPercent) / 100;
+          }
+
           const layer = [
             `co_rgb:${color}`,
             `l_text:${textStyle}:${encoded}`,
+            `c_fit`, // <--- Forces word wrapping within the box
+            `w_${safeWidth.toFixed(4)}`, // <--- Sets the boundary box dynamically
             `fl_relative`,
-            `g_north_west`,
-            `x_${(f.xPercent / 100).toFixed(2)}`,
-            `y_${(f.yPercent / 100).toFixed(2)}`,
+            gravity,
+            `x_${xStr}`,
+            `y_${yStr}`,
           ].join(",");
 
           console.log(`[TGS Debug] Layer ${index} (Text):`, layer);
@@ -84,25 +117,61 @@ function buildCompositeUrl(
         if (field.type === "image") {
           const f = field as ImageField;
 
-          // Sample image URL provided by you
-          const publicId = f.samplePublicId
-            ? f.samplePublicId.replace(/\//g, ":")
-            : "sample";
+          const publicId = (f.samplePublicId || "sample").replace(/\//g, ":");
 
-          // Cloudinary requires remote image URLs to be base64 encoded and stripped of "=" padding
-          const width = f.widthPercent || 30;
+          const baseTransformations = [];
 
-          const layer = [
-            `l_${publicId}`,
-            `c_scale`,
-            `w_${(width / 100).toFixed(2)}`,
+          if (f.cropCoordinates) {
+            baseTransformations.push(
+              `x_${f.cropCoordinates.x}`,
+              `y_${f.cropCoordinates.y}`,
+              `w_${f.cropCoordinates.width}`,
+              `h_${f.cropCoordinates.height}`,
+              `c_crop`,
+            );
+          }
+
+          // 2. Then, scale and fit the image into the MERCHANT-DEFINED area
+          // We use c_fill to ensure the photo always fills the box, cropping excess.
+          baseTransformations.push(
+            `c_fill`,
+            `w_${(f.areaWidth / 100).toFixed(4)}`,
+            `h_${(f.areaHeight / 100).toFixed(4)}`,
             `fl_relative`,
-            `g_north_west`,
-            `x_${(f.xPercent / 100).toFixed(2)}`,
-            `y_${(f.yPercent / 100).toFixed(2)}`,
-          ].join(",");
+          );
 
-          console.log(`[TGS Debug] Layer ${index} (Image):`, layer);
+          const radius =
+            f.borderRadius && f.borderRadius !== "none"
+              ? `r_${f.borderRadius}`
+              : "";
+          if (radius) baseTransformations.push(radius);
+
+          const baseTransformString = baseTransformations
+            .filter(Boolean)
+            .join(",");
+
+          // 3. Apply optional shape mask
+          let maskLayer = "";
+          if (f.maskPublicId) {
+            const maskId = f.maskPublicId.replace(/\//g, ":");
+            maskLayer = `/l_${maskId}/c_scale,w_1.0,h_1.0,fl_region_relative/fl_layer_apply,fl_cutter`;
+          }
+
+          // 4. Apply final rotation and positioning OF THE ENTIRE BOX
+          const angle = f.rotationAngle ? `a_${f.rotationAngle}` : "";
+          const positioning = [
+            angle,
+            `g_north_west`,
+            `x_${(f.areaX / 100).toFixed(4)}`,
+            `y_${(f.areaY / 100).toFixed(4)}`,
+            `fl_layer_apply`,
+          ]
+            .filter(Boolean)
+            .join(",");
+
+          const layer = `l_${publicId}/${baseTransformString}${maskLayer}/${positioning}`;
+
+          console.log(`[TGS Debug] Final Image Layer:`, layer);
           return layer;
         }
 
@@ -129,6 +198,7 @@ export default function ConfigEditor({
   productId,
   onSaved,
 }: ConfigEditorProps) {
+  console.log("Rendering")
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [config, setConfig] = useState<PersonalizationConfig>(DEFAULT_CONFIG);
   const [isPersonalizable, setIsPersonalizable] = useState(false);

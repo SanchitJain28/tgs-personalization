@@ -7,6 +7,7 @@ import {
   DEFAULT_TEXT_FIELD,
   DEFAULT_IMAGE_FIELD,
 } from "../../types";
+import InteractiveAreaSelector from "../interactive-area-selector/InteractiveAreaSelector";
 
 const PRESET_FONTS = [
   "Arial",
@@ -25,6 +26,7 @@ const PRESET_FONTS = [
   "Raleway",
   "Josefin Sans",
 ];
+
 const FONT_WEIGHTS = ["normal", "bold", "light", "thin"];
 const FONT_STYLES = ["normal", "italic"];
 const DECORATIONS = ["none", "underline", "strikethrough"];
@@ -201,11 +203,21 @@ export default function FieldBuilder({
               <div className="fb-divider" />
 
               {/* Position picker */}
-              <FieldPositionPicker
-                field={field}
-                previewImage={previewImage}
-                onUpdate={(patch) => updateField(idx, patch)}
-              />
+              {field.type === "image" && (
+                <InteractiveAreaSelector
+                  field={field as ImageField}
+                  previewImage={previewImage}
+                  onUpdate={(patch) => updateField(idx, patch)}
+                />
+              )}
+
+              {field.type === "text" && (
+                <FieldPositionPicker
+                  field={field as TextField} 
+                  previewImage={previewImage}
+                  onUpdate={(patch) => updateField(idx, patch)}
+                />
+              )}
 
               {/* Text style */}
               {field.type === "text" && (
@@ -222,7 +234,7 @@ export default function FieldBuilder({
               {field.type === "image" && (
                 <>
                   <div className="fb-divider" />
-                  <ImageFieldSizeEditor
+                  <ImageFieldConfigEditor
                     field={field as ImageField}
                     onUpdate={(patch) => updateField(idx, patch)}
                   />
@@ -299,13 +311,55 @@ function FieldPositionPicker({
               </span>
             </div>
           </div>
-          <div className="fb-pos-coords">
-            <span>
+          <div
+            className="fb-pos-coords"
+            style={{ display: "flex", alignItems: "center", width: "100%" }}
+          >
+            <span style={{ minWidth: "50px" }}>
               X: <strong>{xPercent}%</strong>
             </span>
-            <span>
+            <span style={{ minWidth: "50px" }}>
               Y: <strong>{yPercent}%</strong>
             </span>
+
+            <div className="fb-pos-nudges">
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({ yPercent: Math.max(0, yPercent - 1) })
+                }
+                title="Move Up"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({ yPercent: Math.min(100, yPercent + 1) })
+                }
+                title="Move Down"
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({ xPercent: Math.max(0, xPercent - 1) })
+                }
+                title="Move Left"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onUpdate({ xPercent: Math.min(100, xPercent + 1) })
+                }
+                title="Move Right"
+              >
+                →
+              </button>
+            </div>
           </div>
         </>
       ) : (
@@ -318,7 +372,6 @@ function FieldPositionPicker({
   );
 }
 
-/* ── Per-field text style editor ──────────────────── */
 function TextFieldStyleEditor({
   field,
   onUpdate,
@@ -327,14 +380,115 @@ function TextFieldStyleEditor({
   onUpdate: (patch: Partial<TextField>) => void;
 }) {
   const [customFont, setCustomFont] = useState("");
-  const [fontList, setFontList] = useState(PRESET_FONTS);
+  
+  // 1. Initialize fontList from localStorage + Preset Fonts
+  const [fontList, setFontList] = useState<string[]>(() => {
+    const savedFonts = localStorage.getItem("tgs_custom_fonts");
+    if (savedFonts) {
+      try {
+        const parsed = JSON.parse(savedFonts);
+        // Combine saved custom fonts with presets, removing duplicates
+        return Array.from(new Set([...parsed, ...PRESET_FONTS]));
+      } catch (e) {
+        console.error("Failed to parse saved fonts", e);
+      }
+    }
+    return PRESET_FONTS;
+  });
+
+  // 2. Helper to save to local storage
+  const saveFontsToStorage = (newList: string[]) => {
+    // Only save fonts that aren't in the default PRESET_FONTS list
+    const customOnly = newList.filter((f) => !PRESET_FONTS.includes(f));
+    localStorage.setItem("tgs_custom_fonts", JSON.stringify(customOnly));
+  };
 
   function addFont() {
     const f = customFont.trim();
     if (!f || fontList.includes(f)) return;
-    setFontList((prev) => [f, ...prev]);
+    
+    const newList = [f, ...fontList];
+    setFontList(newList);
+    saveFontsToStorage(newList); // Save to storage
+    
     onUpdate({ fontFamily: f });
     setCustomFont("");
+  }
+
+  function handleFontUpload() {
+    if (!window.cloudinary) {
+      alert("Cloudinary widget is still loading. Please try again in a moment.");
+      return;
+    }
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY; 
+    const uploadPreset = "font_upload_preset";
+
+    if (!cloudName || !apiKey) {
+      alert("Missing Cloudinary Cloud Name or API Key environment variables.");
+      return;
+    }
+
+    const generateSignatureCallback = async (
+      callback: (signature: string) => void,
+      paramsToSign: Record<string, unknown>
+    ) => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/cloudinary/sign`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-config-secret": import.meta.env.VITE_CONFIG_SECRET || "", 
+          },
+          body: JSON.stringify({ paramsToSign }),
+        });
+        const data = await response.json();
+        
+        if (data.signature) {
+          callback(data.signature);
+        } else {
+          console.error("No signature returned");
+        }
+      } catch (error) {
+        console.error("Signature generation failed:", error);
+      }
+    };
+
+    const widget = window.cloudinary.createUploadWidget(
+      {
+        cloudName: cloudName,
+        apiKey: apiKey,
+        uploadPreset: uploadPreset,
+        uploadSignature: generateSignatureCallback, 
+        sources: ["local", "url"],
+        multiple: false,
+        resourceType: "raw", 
+        clientAllowedFormats:["ttf", "otf", "woff2"],
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (error: any, result: any) => {
+        if (!error && result && result.event === "success") {
+          let publicId = result.info.public_id;
+          
+          const format = (result.info.format || result.info.original_extension || "ttf").toLowerCase();
+          if (!publicId.toLowerCase().endsWith(`.${format}`)) {
+            publicId += `.${format}`;
+          }
+
+          const cloudinaryFontName = publicId.replace(/\//g, ":");
+          
+          if (!fontList.includes(cloudinaryFontName)) {
+            setFontList((prev) => {
+              const newList = [cloudinaryFontName, ...prev];
+              saveFontsToStorage(newList); // Save to storage
+              return newList;
+            });
+          }
+          onUpdate({ fontFamily: cloudinaryFontName });
+        }
+      }
+    );
+    widget.open();
   }
 
   function chip<T extends string>(
@@ -408,6 +562,30 @@ function TextFieldStyleEditor({
             <button type="button" onClick={addFont}>
               Add
             </button>
+          </div>
+          
+          {/* Cloudinary Font Upload Button */}
+          <div style={{ marginTop: "6px" }}>
+            <button 
+              type="button" 
+              onClick={handleFontUpload}
+              style={{
+                padding: "6px 12px",
+                background: "var(--bg)",
+                border: "1px solid var(--border)",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "12px",
+                width: "100%",
+                color: "var(--text)"
+              }}
+            >
+              Upload Custom Font (.ttf / .otf)
+            </button>
+            <p style={{ fontSize: "10px", color: "var(--text2)", marginTop: "4px", lineHeight: "1.3" }}>
+              * File name <b>must not</b> contain underscores.<br/>
+              * Valid formats: .ttf, .otf, .woff2
+            </p>
           </div>
         </div>
 
@@ -484,7 +662,7 @@ function TextFieldStyleEditor({
       <div
         className="fb-font-preview"
         style={{
-          fontFamily: field.fontFamily,
+          fontFamily: field.fontFamily.includes(".ttf") || field.fontFamily.includes(".otf") ? "sans-serif" : field.fontFamily,
           color: `#${field.textColor}`,
           fontWeight: field.fontWeight as React.CSSProperties["fontWeight"],
           fontStyle: field.fontStyle as React.CSSProperties["fontStyle"],
@@ -500,30 +678,31 @@ function TextFieldStyleEditor({
   );
 }
 
-/* ── Image field size editor ──────────────────────── */
-function ImageFieldSizeEditor({
+/* ── Image field configuration editor ──────────────────────── */
+function ImageFieldConfigEditor({
   field,
   onUpdate,
 }: {
-  field: ImageField;
-  onUpdate: (patch: Partial<ImageField>) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  field: any; // Using any here temporarily to support the new dynamic properties
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onUpdate: (patch: any) => void;
 }) {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  // const apiKey = import.meta.env.VITE_CLOUDINARY_API_KEY; 
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "ml_default"; 
 
-  function handleUpload() {
-    if (!window.cloudinary) {
-      alert(
-        "Cloudinary widget is still loading. Please try again in a moment.",
-      );
-      return;
-    }
+  function handleUpload(isMask: boolean = false) {
+    if (!window.cloudinary) return alert("Cloudinary widget is still loading.");
 
-    if (!cloudName || !uploadPreset) {
-      alert(
-        "Missing Cloudinary environment variables (Cloud Name or Upload Preset).",
-      );
-      return;
+    // Determine the aspect ratio from the field's settings.
+    // The format needs to be a number (e.g., 4/3 = 1.333).
+    let croppingAspectRatio = null;
+    if (field.aspectRatio && field.aspectRatio !== "auto") {
+      const parts = field.aspectRatio.split(":");
+      if (parts.length === 2) {
+        croppingAspectRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+      }
     }
 
     const widget = window.cloudinary.createUploadWidget(
@@ -533,19 +712,39 @@ function ImageFieldSizeEditor({
         sources: ["local", "url", "camera"],
         multiple: false,
         clientAllowedFormats: ["png", "jpeg", "jpg", "webp"],
+        // --- CROPPING CONFIGURATION ---
+        cropping: !isMask, // Enable cropping only for the main image, not masks
+        croppingAspectRatio: croppingAspectRatio, // Enforce the ratio
+        croppingShowDimensions: true,
+        croppingValidateDimensions: true,
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (error: any, result: any) => {
         if (!error && result && result.event === "success") {
-          console.log(
-            "[TGS Debug] Uploaded Image Public ID:",
-            result.info.public_id,
-          );
-          onUpdate({ samplePublicId: result.info.public_id });
+          const publicId = result.info.public_id;
+
+          if (isMask) {
+            onUpdate({ maskPublicId: publicId });
+          } else {
+            // If the user cropped, the coordinates will be in the result!
+            const cropData = result.info.coordinates?.custom?.[0];
+            const cropCoordinates = cropData
+              ? {
+                  x: cropData[0],
+                  y: cropData[1],
+                  width: cropData[2],
+                  height: cropData[3],
+                }
+              : undefined;
+
+            onUpdate({
+              samplePublicId: publicId,
+              cropCoordinates: cropCoordinates,
+            });
+          }
         }
       },
     );
-
     widget.open();
   }
 
@@ -553,42 +752,105 @@ function ImageFieldSizeEditor({
     <div className="fb-style">
       <p className="fb-sub-label">Image Configuration</p>
 
-      <div className="fb-group">
-        <label>Test Image (For Preview)</label>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={handleUpload}
+      {/* Uploads */}
+      <div className="fb-style-grid">
+        <div className="fb-group fb-group--wide">
+          <label>Test Image (For Preview)</label>
+          <div
             style={{
-              padding: "8px 16px",
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "13px",
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+              flexWrap: "wrap",
             }}
           >
-            {field.samplePublicId ? "Change Test Image" : "Upload Test Image"}
-          </button>
-          {field.samplePublicId && (
-            <span style={{ fontSize: "12px", color: "var(--gold)" }}>
-              ✓ Image loaded
-            </span>
-          )}
+            <button
+              type="button"
+              onClick={() => handleUpload(false)}
+              className="fb-chip"
+            >
+              {field.samplePublicId ? "Change Test Image" : "Upload Test Image"}
+            </button>
+            {field.samplePublicId && (
+              <span style={{ fontSize: "11px", color: "var(--gold)" }}>
+                ✓ Loaded
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="fb-group fb-group--wide">
+          <label>Custom Shape Mask (e.g. Heart/Star)</label>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => handleUpload(true)}
+              className="fb-chip"
+            >
+              {field.maskPublicId ? "Change Mask" : "Upload Mask (PNG)"}
+            </button>
+            {field.maskPublicId && (
+              <button
+                type="button"
+                onClick={() => onUpdate({ maskPublicId: null })}
+                className="fb-chip"
+                style={{ borderColor: "#c0392b", color: "#c0392b" }}
+              >
+                ✕ Remove
+              </button>
+            )}
+          </div>
+          <p
+            style={{
+              fontSize: "10px",
+              color: "var(--text2)",
+              marginTop: "4px",
+            }}
+          >
+            * Mask must be a solid opaque shape on a transparent background.
+          </p>
         </div>
       </div>
 
-      <div className="fb-group" style={{ marginTop: "12px" }}>
-        <label>Width — {field.widthPercent}% of product image</label>
-        <input
-          type="range"
-          name="widthPercent"
-          title="Image width percentage"
-          min={5}
-          max={100}
-          value={field.widthPercent}
-          onChange={(e) => onUpdate({ widthPercent: Number(e.target.value) })}
-        />
+      <div className="fb-divider" />
+
+      {/* Sliders and Selects */}
+      <div className="fb-style-grid">
+        <div className="fb-group">
+          <label>Crop / Aspect Ratio</label>
+          <select
+            title="aspectRatio"
+            value={field.aspectRatio || "auto"}
+            onChange={(e) => onUpdate({ aspectRatio: e.target.value })}
+          >
+            <option value="auto">Auto (No Crop)</option>
+            <option value="1:1">1:1 (Square)</option>
+            <option value="4:3">4:3 (Landscape)</option>
+            <option value="3:4">3:4 (Portrait)</option>
+            <option value="16:9">16:9 (Wide)</option>
+          </select>
+        </div>
+
+        <div className="fb-group">
+          <label>Shape / Border Radius</label>
+          <select
+            title="borderRadius"
+            value={field.borderRadius || "none"}
+            onChange={(e) => onUpdate({ borderRadius: e.target.value })}
+          >
+            <option value="none">None (Sharp)</option>
+            <option value="10">Slightly Rounded</option>
+            <option value="30">Very Rounded</option>
+            <option value="max">Max (Circle / Oval)</option>
+          </select>
+        </div>
       </div>
     </div>
   );

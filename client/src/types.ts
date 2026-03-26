@@ -19,10 +19,23 @@ export interface TextField {
 export interface ImageField {
   type: "image";
   label: string;
-  xPercent: number;
-  yPercent: number;
-  widthPercent: number;
+  // REMOVED: xPercent, yPercent, widthPercent, aspectRatio
+  // NEW properties for the interactive area:
+  areaX: number; // % from left
+  areaY: number; // % from top
+  areaWidth: number; // % width
+  areaHeight: number; // % height
+
   samplePublicId?: string;
+  maskPublicId?: string;
+  rotationAngle: number;
+  borderRadius?: string;
+  cropCoordinates?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 export type Field = TextField | ImageField;
@@ -60,10 +73,16 @@ export const DEFAULT_TEXT_FIELD: TextField = {
 
 export const DEFAULT_IMAGE_FIELD: ImageField = {
   type: "image",
-  label: "",
-  xPercent: 30,
-  yPercent: 20,
-  widthPercent: 35,
+  label: "User Photo",
+  areaX: 10,
+  areaY: 15,
+  areaWidth: 80,
+  areaHeight: 70,
+  samplePublicId: undefined,
+  maskPublicId: undefined,
+  rotationAngle: 0,
+  borderRadius: "none",
+  cropCoordinates: undefined,
 };
 
 export const DEFAULT_CONFIG: PersonalizationConfig = { fields: [] };
