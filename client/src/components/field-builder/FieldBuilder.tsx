@@ -264,9 +264,9 @@ function FieldPositionPicker({
   previewImage,
   onUpdate,
 }: {
-  field: Field;
+  field: TextField;
   previewImage: string | null;
-  onUpdate: (patch: Partial<Field>) => void;
+  onUpdate: (patch: Partial<TextField>) => void;
 }) {
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
